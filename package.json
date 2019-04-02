@@ -1,0 +1,19 @@
+{
+  "name": "douplus_intro",
+  "version": "0.0.1",
+  "description": "description",
+  "author": "author",
+  "alias": {
+    "apis": "./src/apis",
+    "utils": "./src/utils",
+    "components": "./src/components",
+    "assets": "./src/assets"
+  },
+  "scripts": {
+    "dev": "minreact-scripts dev"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "minreact-scripts": "0.0.58"
+  }
+}

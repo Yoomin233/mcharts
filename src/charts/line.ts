@@ -14,6 +14,7 @@ export default class LineChart {
   scaleCtx: CanvasRenderingContext2D;
   chartCtx: CanvasRenderingContext2D;
   tooltipCtx: CanvasRenderingContext2D;
+  chartCanvasElement: HTMLCanvasElement;
 
   highestYScale: number;
   yScaleCoordinates: [[number, number]?] = [];
@@ -42,6 +43,7 @@ export default class LineChart {
    * @param settings CommonChartOptions
    */
   constructor(settings: LineChartOptions) {
+    // console.log(settings)
     if (!settings.mountNode) {
       return;
     }
@@ -62,6 +64,7 @@ export default class LineChart {
     const scaleCanvasElement = document.createElement("canvas");
     // create chart element canvas
     const chartCanvasElement = document.createElement("canvas");
+    this.chartCanvasElement = chartCanvasElement;
     // create tooltip element canvas
     const tooltipCanvasElement = document.createElement("canvas");
 
@@ -95,23 +98,32 @@ export default class LineChart {
     // options.barStyle.width *= options.dpi;
 
     // 添加鼠标事件
-    if (navigator.maxTouchPoints) {
-      wrapperElement.addEventListener("touchstart", this.handleTouchStart);
-    } else {
-      // wrapperElement.addEventListener("mousemove", this.handleMouseMove);
-    }
+    // if (navigator.maxTouchPoints) {
+    // alert("added!");
+    wrapperElement.addEventListener("touchstart", this.handleTouchStart);
+    // } else {
+    // wrapperElement.addEventListener("mousemove", this.handleMouseMove);
+    // }
 
-    // 计算最大刻度和最大值
-    if (Array.isArray(options.datas[0])) {
-    } else {
-      this.highestYScale = Tools.getNearest5BasedNumber(Math.max.apply(Math, (options.datas as LineChartDataStruct[]).map(d => d.value)));
-    }
     // draw scales
     this.drawScales();
     requestAnimationFrame(() => {
       this.positions = chartCanvasElement.getBoundingClientRect();
     });
     return this;
+  }
+  rerender(newDatas: LineChartDataStruct[]) {
+    this.options.datas = newDatas;
+    this.xScaleCoordinates = [];
+    this.yScaleCoordinates = [];
+    this.registeredPoints = [];
+    this.scaleCtx.beginPath();
+    this.scaleCtx.clearRect(0, this.height, this.width, this.height);
+    this.chartCtx.beginPath();
+    this.chartCtx.clearRect(0, this.height, this.width, this.height);
+    this.tooltipCtx.beginPath();
+    this.tooltipCtx.clearRect(0, this.height, this.width, this.height);
+    this.drawScales();
   }
   /**
    * 画坐标轴
@@ -121,12 +133,19 @@ export default class LineChart {
     const { datas, drawScale, textOptions, scalePaddingLeft } = this.options;
     // 设定字体、线宽
     const textSize = this.options.textOptions.size;
+    // 计算最大刻度和最大值
+    if (Array.isArray(this.options.datas[0])) {
+    } else {
+      this.highestYScale = Tools.getNearest5BasedNumber(
+        Math.max.apply(Math, (this.options.datas as LineChartDataStruct[]).map(d => d.value))
+      );
+    }
     this.scaleCtx.lineWidth = this.options.scaleOptions.width;
     // 总共y刻度的数量(+1)
     const yScaleCount = 5;
     this.scalePaddingLeft = scalePaddingLeft;
     this.scalePaddingTop = textOptions.size * 2;
-    this.scalePaddingBottom = textOptions.size * 3;
+    this.scalePaddingBottom = textOptions.size * 2;
     // x, y坐标轴初始线
     this.scaleCtx.strokeStyle = this.options.scaleOptions.color;
     this.scaleCtx.setLineDash(this.options.scaleOptions.dash || []);
@@ -204,7 +223,7 @@ export default class LineChart {
         if (x - latestDrawXScaleXCoordinate <= xScaleInterval) {
           continue;
         } else {
-          console.log(x);
+          // console.log(x);
           this.options.scaleOptions.x.tip && Tools.drawLine(this.scaleCtx, [[x, startY], [x, endY]]);
           const text = Tools.formatTime(datas[i].time, this.options.scaleOptions.x.format);
           scaleCtx.fillText(
@@ -216,13 +235,17 @@ export default class LineChart {
         }
       }
     }
+    // const desiredWidth = this.xScaleCoordinates[this.xScaleCoordinates.length - 1][0] - this.xScaleCoordinates[0][0];
+    // this.chartCanvasElement.width = desiredWidth * this.options.dpi;
+    // this.chartCanvasElement.style.left = `${(this.width - desiredWidth) / 2}px`;
+
     this.drawLines();
   }
   /**
    * 画主要部分线段
    */
   drawLines() {
-    const { chartCtx } = this;
+    const { chartCtx, registeredPoints } = this;
     const { datas } = this.options;
     const { width: lineWidth } = this.options.lineOptions;
     // const xScaleInterval =
@@ -232,24 +255,96 @@ export default class LineChart {
     // this
     // chartCtx.lineCap = this.options.barStyle.lineCap;
     const drawLineSpaceVertically = this.height - this.scalePaddingBottom - this.scalePaddingTop;
+    // let lastPoint: [number, number];
+    let highestYPoint = 0;
+    let latestControlPoint: [number, number];
     this.xScaleCoordinates.forEach((coord, index) => {
       const currentData = datas[index];
       const x = coord[0];
       const y = drawLineSpaceVertically * (datas[index].value / this.highestYScale) + this.scalePaddingBottom;
-      if (index === 0) {
-        chartCtx.moveTo(x, y);
-      } else {
-        chartCtx.lineTo(x, y);
+      if (y > highestYPoint) {
+        highestYPoint = y;
       }
-      // Tools.drawLine(chartCtx, [[x, startY + barWidth / 4], [x, endY - barWidth / 4]]);
-      // setTimeout(() => {
-      //   this.animateBar(x, startY + barWidth / 4, endY - barWidth / 4);
-      // }, 200 * index);
       this.registeredPoints.push({
         position: [x, y],
         data: currentData
       });
     });
+    this.registeredPoints.forEach(({ position: point }, index) => {
+      if (this.options.lineOptions.bezierCurve) {
+        let startPointCoords: [number, number];
+        let endPointCoords: [number, number];
+        if (index === 0) {
+          const nextPointCoords = this.registeredPoints[index + 1].position;
+          endPointCoords = [(nextPointCoords[0] + point[0]) / 2, (nextPointCoords[1] + point[1]) / 2];
+          startPointCoords = [2 * point[0] - endPointCoords[0], endPointCoords[1]];
+
+          // this.chartCtx.stroke();
+          // this.chartCtx.beginPath();
+          // this.chartCtx.strokeStyle = "#000";
+          // this.chartCtx.arc(startPointCoords[0], startPointCoords[1], 5, 0, Math.PI * 2);
+          // this.chartCtx.arc(endPointCoords[0], endPointCoords[1], 5, 0, Math.PI * 2);
+          // this.chartCtx.stroke()
+          // this.chartCtx.closePath();
+          // console.log(point, nextPointCoords);
+          // console.log(startPointCoords, endPointCoords);
+        } else if (index === this.xScaleCoordinates.length - 1) {
+          startPointCoords = latestControlPoint;
+          endPointCoords = [2 * point[0] - startPointCoords[0], startPointCoords[1]];
+        } else {
+          const nextPointCoords = this.xScaleCoordinates[index + 1];
+          startPointCoords = latestControlPoint;
+          endPointCoords = [(nextPointCoords[0] + point[0]) / 2, nextPointCoords[1] + point[1] / 2];
+        }
+        this.chartCtx.moveTo(...startPointCoords);
+        this.chartCtx.bezierCurveTo(point[0], point[1], point[0], point[1], ...endPointCoords);
+        // console.log(startPointCoords, endPointCoords);
+        latestControlPoint = endPointCoords;
+        // this.chartCtx.beginPath();
+        // this.chartCtx.arc(point[0], point[1], 5, 0, Math.PI * 2);
+        // this.chartCtx.stroke();
+        // this.chartCtx.closePath();
+        // this.charC
+      } else {
+        if (index === 0) {
+          // this.chartCtx.beginPath()
+          // chartCtx.strokeStyle = 'yellow'
+          chartCtx.moveTo(point[0], this.scalePaddingBottom + this.options.scaleOptions.width / 2);
+          chartCtx.lineTo(point[0], point[1]);
+          // chartCtx.stroke()
+          // lastPoint = [point[0], y]
+          // this.chartCtx.closePath()
+        } else if (index === this.xScaleCoordinates.length - 1) {
+          chartCtx.lineTo(point[0], point[1]);
+          chartCtx.lineTo(point[0], this.scalePaddingBottom + this.options.scaleOptions.width / 2);
+        } else {
+          // chartCtx.strokeStyle = 'red'
+          // chartCtx.moveTo(...lastPoint)
+          chartCtx.lineTo(point[0], point[1]);
+          // lastPoint = [x, y]
+          // chartCtx.stroke()
+        }
+      }
+    });
+    // this.chartCtx.stroke();
+    if (this.options.lineOptions.gradient.length) {
+      // const startDrawX = this.xScaleCoordinates[0][0]
+      // const endDrawX = this.xScaleCoordinates[this.xScaleCoordinates.length - 1][0]
+      const { gradient: gradientOptions } = this.options.lineOptions;
+      const gradient = this.chartCtx.createLinearGradient(0, highestYPoint, 0, this.scalePaddingBottom);
+      gradientOptions.forEach(g => gradient.addColorStop(g[0], g[1]));
+      this.chartCtx.fillStyle = gradient;
+      // this.chartCtx.fillRect(startDrawX, highestYPoint, endDrawX - startDrawX, highestYPoint - this.scalePaddingBottom);
+      this.chartCtx.fill();
+      // 干掉左右两边的线段
+      this.chartCtx.clearRect(0, this.height, this.xScaleCoordinates[0][0] + 1, this.height);
+      const lastxScaleCoord = this.xScaleCoordinates.slice(-1)[0];
+      this.chartCtx.clearRect(lastxScaleCoord[0] - 1, this.height, 1000, this.height);
+    }
+
+    // this.chartCtx.beginPath();
+    // this.chartCtx.moveTo(200, 200);
+    // this.chartCtx.bezierCurveTo(250, 500, 250, 500, 300, 200);
     this.chartCtx.stroke();
   }
 
@@ -258,7 +353,7 @@ export default class LineChart {
     this.tooltipCtx.clearRect(0, this.height, this.width, this.height);
     this.tooltipCtx.strokeStyle = this.tooltipCtx.fillStyle = this.options.toolTip.color[0];
     this.tooltipCtx.lineWidth = 2;
-    this.tooltipCtx.setLineDash([15, 15]);
+    this.tooltipCtx.setLineDash([10, 10]);
     this.tooltipCtx.font = `${this.options.textOptions.size * this.options.dpi * 0.9}px Arial`;
 
     // const offsetY = this.height - (e.touches[0].clientY - this.positions.top);

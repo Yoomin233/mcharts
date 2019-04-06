@@ -23,6 +23,8 @@ export interface CommonChartOptions {
   lineOptions?: {
     width?: number;
     color?: string;
+    gradient?: [number, string][];
+    bezierCurve?: boolean;
   };
   scaleOptions?: {
     width?: number;
@@ -136,21 +138,50 @@ const width = window.innerWidth;
 //   legends: true
 // });
 
-const lineChartSettings = {
+const lineChartSettings: LineChartOptions = {
   mountNode: document.querySelector("#root"),
-  colors: ["#0FFCF5"],
-  datas: Array.from({ length: 30 }).map((_, index) => ({
-    item: `播放${index}`,
-    value: Math.random(),
-    time: 1554120768876
-  })),
+  colors: ["red"],
+  datas: [
+    { item: "播放0", value: 4.06974592501931, time: 1554120768876 },
+    { item: "播放1", value: 1.258310528188843, time: 1554120768876 },
+    { item: "播放2", value: 4.487198864924272, time: 1554120768876 },
+    { item: "播放3", value: 2.5257653848128547, time: 1554120768876 },
+    { item: "播放4", value: 0.9268780322951775, time: 1554120768876 },
+    { item: "播放5", value: 0.07358710719595485, time: 1554120768876 },
+    { item: "播放6", value: 1.4428415276032547, time: 1554120768876 },
+    { item: "播放7", value: 4.966146769870501, time: 1554120768876 },
+    { item: "播放8", value: 3.5032981745273997, time: 1554120768876 },
+    { item: "播放9", value: 2.7858088997177877, time: 1554120768876 },
+    { item: "播放10", value: 2.7384762135042062, time: 1554120768876 },
+    { item: "播放11", value: 2.0829781335659927, time: 1554120768876 },
+    { item: "播放12", value: 0.580843675839271, time: 1554120768876 },
+    { item: "播放13", value: 0.6517889124018694, time: 1554120768876 },
+    { item: "播放14", value: 1.8098070479347639, time: 1554120768876 },
+    { item: "播放15", value: 4.046090065662322, time: 1554120768876 },
+    { item: "播放16", value: 4.447353743503111, time: 1554120768876 },
+    { item: "播放17", value: 3.749894842933188, time: 1554120768876 },
+    { item: "播放18", value: 4.95052673211264, time: 1554120768876 },
+    { item: "播放19", value: 3.668258770718925, time: 1554120768876 },
+    { item: "播放20", value: 3.6376851717879854, time: 1554120768876 },
+    { item: "播放21", value: 2.7812990907869937, time: 1554120768876 },
+    { item: "播放22", value: 1.0556948239352304, time: 1554120768876 },
+    { item: "播放23", value: 2.9876119657760603, time: 1554120768876 },
+    { item: "播放24", value: 2.852370880871198, time: 1554120768876 },
+    { item: "播放25", value: 2.183472153761402, time: 1554120768876 },
+    { item: "播放26", value: 4.375492403702539, time: 1554120768876 },
+    { item: "播放27", value: 1.761968038003392, time: 1554120768876 },
+    { item: "播放28", value: 0.923624386728068, time: 1554120768876 },
+    { item: "播放29", value: 2.36674609667738, time: 1554120768876 }
+  ],
   height: width * 0.8,
   width: width * 0.9,
   textOptions: {
     size: 16
   },
   lineOptions: {
-    width: 3
+    width: 4,
+    gradient: [],
+    bezierCurve: true
   },
   scalePaddingLeft: 0,
   drawScale: {

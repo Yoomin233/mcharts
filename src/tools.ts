@@ -66,8 +66,22 @@ export const TransformContextCoordinates = (
   const originalRect = ctx.rect.bind(ctx);
   ctx.rect = (x: number, y: number, w: number, h: number) => originalRect(xTransformer(x), yTransformer(y), w * dpi, h * dpi);
 
+  const originalFillRect = ctx.fillRect.bind(ctx);
+  ctx.fillRect = (x: number, y: number, w: number, h: number) => {
+    // console.log(xTransformer(x), yTransformer(y), w, h);
+    return originalFillRect(xTransformer(x), yTransformer(y), w * dpi, h * dpi);
+  };
+
   const originalClearRect = ctx.clearRect.bind(ctx);
   ctx.clearRect = (x: number, y: number, w: number, h: number) => originalClearRect(xTransformer(x), yTransformer(y), w * dpi, h * dpi);
+
+  const originalcreateLinearGradient = ctx.createLinearGradient.bind(ctx);
+  ctx.createLinearGradient = (x0: number, y0: number, x1: number, y1: number) =>
+    originalcreateLinearGradient(xTransformer(x0), yTransformer(y0), xTransformer(x1), yTransformer(y1));
+
+  const originalBezierCurveTo = ctx.bezierCurveTo.bind(ctx);
+  ctx.bezierCurveTo = (cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number) =>
+    originalBezierCurveTo(xTransformer(cp1x), yTransformer(cp1y), xTransformer(cp2x), yTransformer(cp2y), xTransformer(x), yTransformer(y));
 
   return ctx;
 };

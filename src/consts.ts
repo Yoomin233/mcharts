@@ -14,7 +14,9 @@ export const defaultChartSettings: CommonChartOptions = {
   },
   lineOptions: {
     width: 1,
-    color: "#666"
+    color: "#666",
+    gradient: [],
+    bezierCurve: false
   },
   scaleOptions: {
     width: 1,

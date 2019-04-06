@@ -102,17 +102,30 @@ export default class BarChart {
     options.barStyle.width *= options.dpi;
 
     // 添加鼠标事件
-    if (navigator.maxTouchPoints) {
-      wrapperElement.addEventListener("touchstart", this.handleTouchStart);
-    } else {
-      wrapperElement.addEventListener("mousemove", this.handleMouseMove);
-    }
+    // if (navigator.maxTouchPoints) {
+    wrapperElement.addEventListener("touchstart", this.handleTouchStart);
+    // } else {
+    wrapperElement.addEventListener("mousemove", this.handleMouseMove);
+    // }
     // draw scales
     this.drawScales();
     requestAnimationFrame(() => {
       this.positions = chartCanvasElement.getBoundingClientRect();
     });
     return this;
+  }
+  rerender(newDatas: { value: number; item: string }[]) {
+    this.options.datas = newDatas;
+    this.xScaleCoordinates = [];
+    this.yScaleCoordinates = [];
+    this.registeredBarAreas = [];
+    this.scaleCtx.beginPath();
+    this.scaleCtx.clearRect(0, this.height, this.width, this.height);
+    this.chartCtx.beginPath();
+    this.chartCtx.clearRect(0, this.height, this.width, this.height);
+    this.tooltipCtx.beginPath();
+    this.tooltipCtx.clearRect(0, this.height, this.width, this.height);
+    this.drawScales();
   }
   /**
    * 画坐标轴
@@ -191,11 +204,13 @@ export default class BarChart {
       const x = coord[0];
       const endY = this.scalePaddingBottom + (datas[index].value / this.highestYScale) * this.ySpaceAvailableForBar;
       // Tools.drawLine(this.chartCtx, [[x, startY + barWidth / 4], [x, endY - barWidth / 4]]);
-      setTimeout(() => {
-        this.animateBar(x, startY + barWidth / 4, endY - barWidth / 4);
-      }, 200 * index);
+      if (datas[index].value !== 0) {
+        setTimeout(() => {
+          this.animateBar(x, startY + barWidth / 4, endY - barWidth / 4);
+        }, 200 * index);
+      }
       this.registeredBarAreas.push({
-        areas: [[x - barWidth / 4, startY], [x + barWidth / 4, endY]],
+        areas: [[x - barWidth / 4, startY], [x + barWidth / 4, datas[index].value === 0 ? startY + 100 : endY]],
         data: datas[index]
       });
     });
@@ -230,9 +245,19 @@ export default class BarChart {
         // const endY = this.scalePaddingBottom + (this.registeredBarAreas[i].data.value / this.highestYScale) * this.ySpaceAvailableForBar;
         // this.chartCtx.
         console.log(this.registeredBarAreas[i]);
+        const area = this.registeredBarAreas[i].areas;
+        const xScale = this.xScaleCoordinates[i];
+        this.tooltipCtx.lineWidth = this.options.lineOptions.width;
+        // 决定线段高度
+        const tipY = this.height - this.scalePaddingBottom + this.scalePaddingTop;
+        const tipWidth = Tools.calculateTextLength(String(this.registeredBarAreas[i].data.value)) * this.options.textOptions.size;
+        Tools.drawLine(this.tooltipCtx, [xScale, [xScale[0], tipY]]);
+        this.tooltipCtx.fillText(String(this.registeredBarAreas[i].data.value), xScale[0] - tipWidth / 2, tipY);
+        return;
         // break;
       }
     }
+    return this.tooltipCtx.clearRect(0, this.height, this.width, this.height - this.scalePaddingBottom);
   };
   /**
    * 画tooltip的线段. 这一块代码有点难看, 需要优化

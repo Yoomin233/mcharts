@@ -3,6 +3,7 @@ import "./common.module.less";
 import BarChart from "./charts/bar";
 import PieChart from "./charts/pie";
 import LineChart from "./charts/line";
+import FuncChart from "./charts/func";
 
 export interface ChartDataStruct {
   item: string;
@@ -195,4 +196,8 @@ const lineChartSettings: LineChartOptions = {
 
 // console.log(lineChartSettings);
 
-window.lineChart = new LineChart(lineChartSettings);
+// window.lineChart = new LineChart(lineChartSettings);
+
+window.funcChart = new FuncChart({
+  mountNode: document.querySelector("#root"),
+})
